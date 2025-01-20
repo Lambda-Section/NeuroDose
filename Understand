@@ -1,3 +1,11 @@
 Elimination Rate Constant
 plt.figure
 axhline
+zeros_like
+
+# Calculate cumulative concentration
+cumulative_concentration = np.zeros_like(time)
+for dose_time, dose in doses:
+    decay = dose * np.exp(-lambda_const * (time - dose_time))
+    decay[time < dose_time] = 0  # No concentration before the dose is taken
+    cumulative_concentration += decay
