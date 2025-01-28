@@ -1,10 +1,24 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine } from 'recharts';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Bell, Moon, Sun, Activity } from 'lucide-react';
+"use client";
+import React, { useState, useEffect } from 'react';
+import { Button } from "./ui/button.jsx";
+import { Input } from "./ui/input.jsx";
+import { Card, CardHeader, CardTitle, CardContent } from "./ui/card.jsx";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "./ui/tabs.jsx";
+import { Alert, AlertDescription } from "./ui/alert.jsx";
+import { Activity, Bell, Moon, Sun } from "lucide-react";
+import {
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ReferenceLine
+} from 'recharts';
+import BrainVisualization from './BrainVisualization';
+
 
 // Enhanced compound database with detailed pharmacokinetics
 const compounds = {
@@ -81,6 +95,75 @@ const SupplementTracker = () => {
     amount: 100,
     timestamp: new Date().toISOString().slice(0, 16)
   });
+  const [metrics, setMetrics] = useState({
+    synergisticScore: 0,
+    toleranceRisk: 0,
+    circadianAlignment: 0
+  });
+
+  // Circadian alignment
+  const calculateCircadianAlignment = (time) => {
+    const hour = time.getHours();
+    const sleepStartHour = parseInt(sleepSchedule.start.split(':')[0]);
+    const sleepEndHour = parseInt(sleepSchedule.end.split(':')[0]);
+  
+  // Optimal hours are between sleep end and 2 hours before sleep start
+  const optimalStart = sleepEndHour;
+  const optimalEnd = sleepStartHour - 2;
+  
+  if (hour >= optimalStart && hour <= optimalEnd) {
+    return 1;
+  } else if (hour >= sleepStartHour || hour < sleepEndHour) {
+    return 0; // During sleep hours
+  } else {
+    return 0.5; // Suboptimal hours
+  }
+  };
+
+  // Add this effect to update metrics
+  useEffect(() => {
+    const updateMetrics = () => {
+      const now = new Date();
+      const currentLevels = {};
+
+      // Calculate current levels
+      Object.keys(compounds).forEach(compound => {
+        currentLevels[compound] = doses
+          .filter(d => d.compound === compound)
+          .reduce((sum, d) => sum + calculateConcentration(d, now), 0);
+      });
+
+      // Calculate synergistic score
+      const synergisticScore = Object.keys(compounds).reduce((score, compound) => {
+        const interactions = compounds[compound].interactionNotes;
+        return Object.entries(interactions).reduce((sum, [interacting, note]) => {
+          if (currentLevels[interacting] > 0 && note.includes('Synergistic')) {
+            return sum + 1;
+          }
+          return sum;
+        }, score);
+      }, 0);
+
+      // Calculate tolerance risk
+      const toleranceRisk = Object.entries(currentLevels).reduce((risk, [compound, level]) => {
+        const maxDaily = compounds[compound].maxDailyDose;
+        return risk + (level > maxDaily * 0.8 ? 1 : 0);
+      }, 0);
+
+      // Calculate circadian alignment
+      const circadianAlignment = calculateCircadianAlignment(now);
+
+      setMetrics({
+        synergisticScore,
+        toleranceRisk,
+        circadianAlignment
+      });
+    };
+
+    updateMetrics();
+    const interval = setInterval(updateMetrics, 60000);
+    return () => clearInterval(interval);
+  }, [doses, sleepSchedule]);
 
   // Enhanced pharmacokinetic model
   const calculateConcentration = (dose, currentTime) => {
@@ -97,7 +180,11 @@ const SupplementTracker = () => {
 
   // Time series data generator with peak indicators
   const generateTimePoints = () => {
-    if (doses.length === 0) return [];
+  console.log('Generating time points. Current doses:', doses);
+  if (doses.length === 0) {
+    console.log('No doses available');
+    return [];
+  }
     
     const now = new Date();
     const earliest = Math.min(...doses.map(d => new Date(d.timestamp)));
@@ -123,6 +210,7 @@ const SupplementTracker = () => {
       current = new Date(current.getTime() + 3600000); // Add 1 hour
     }
     
+    console.log('Generated time points:', timePoints);
     return timePoints;
   };
 
@@ -156,6 +244,14 @@ const SupplementTracker = () => {
           </CardTitle>
         </CardHeader>
         <CardContent>
+        <Tabs defaultValue="overview" className="space-y-4">
+          <TabsList>
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="visualization">3D View</TabsTrigger>
+            <TabsTrigger value="metrics">Metrics</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="overview">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Input Section */}
             <div className="space-y-4">
@@ -184,7 +280,12 @@ const SupplementTracker = () => {
                   onChange={e => setNewDose({...newDose, timestamp: e.target.value})}
                 />
                 
-                <Button onClick={() => setDoses([...doses, { ...newDose, amount: Number(newDose.amount) }])}>
+                {/* Add Dose Button */}
+                <Button onClick={() => {
+                  const updatedDoses = [...doses, { ...newDose, amount: Number(newDose.amount) }];
+                  console.log('Updated doses: ', updatedDoses);
+                  setDoses(updatedDoses);
+                }}>
                   Add Dose
                 </Button>
               </div>
@@ -249,7 +350,7 @@ const SupplementTracker = () => {
             <div className="space-y-4">
               <div className="h-96 bg-white p-4 rounded-lg">
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={generateTimePoints()} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                  <LineChart data={generateTimePoints()} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
                     <CartesianGrid strokeDasharray="3 3" className="opacity-50" />
                     <XAxis
                       dataKey="time"
@@ -288,6 +389,58 @@ const SupplementTracker = () => {
               </div>
             </div>
           </div>
+          </TabsContent>
+
+          <TabsContent value="visualization">
+            <div className="bg-white p-4 rounded-lg">
+              <BrainVisualization
+                concentrationLevels={Object.fromEntries(
+                  Object.keys(compounds).map(compound => [
+                    compound,
+                    doses
+                      .filter(d => d.compound === compound)
+                      .reduce((sum, d) => calculateConcentration(d, new Date()), 0)
+                  ])
+                )}
+                compounds={compounds}
+              />
+            </div>
+          </TabsContent>
+
+          <TabsContent value="metrics">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Synergistic Score</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{metrics.synergisticScore.toFixed(1)}</div>
+                  <p className="text-sm text-gray-500">Positive compound interactions</p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Tolerance Risk</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{metrics.toleranceRisk.toFixed(1)}</div>
+                  <p className="text-sm text-gray-500">Risk of developing tolerance</p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Circadian Alignment</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{(metrics.circadianAlignment * 100).toFixed(0)}%</div>
+                  <p className="text-sm text-gray-500">Alignment with natural rhythm</p>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+        </Tabs>
         </CardContent>
       </Card>
     </div>

@@ -9,3 +9,12 @@ for dose_time, dose in doses:
     decay = dose * np.exp(-lambda_const * (time - dose_time))
     decay[time < dose_time] = 0  # No concentration before the dose is taken
     cumulative_concentration += decay
+
+
+
+    Ideas
+    Add where the compound are acting on the brain visualization
+
+    hydration 
+    client side
+    server side
