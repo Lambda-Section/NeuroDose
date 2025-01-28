@@ -1,5 +1,20 @@
 28 01 25
 
+- Added new compound and its properties 'Magnesium'
+- Understand UseEffect by reading Documentation
+10 %
+- Enhance the useEffect for notifications to include more conditions (e.g., warnings for exceeding max daily dose).
+(Done)
+
+
+- Add a "Dismiss" button to notifications in the UI
+- Add a "Reset" button to reset doses and start fresh
+- Enhance the 3D visualization
+- Implement User Authentication
+- Add a circadin Rhtyhm Visualization
+
+
+
 - Error Handling: Add error handling for edge cases, such as invalid input values in the Input component or missing compound data in the SupplementTracker.
 - Accessibility: Ensure all components are accessible (e.g., add aria-* attributes to Button, Input, and Alert components).
 - Performance: Optimize the BrainVisualization component to avoid unnecessary re-renders. For example, memoize the particle system calculations or use useMemo for expensive computations.

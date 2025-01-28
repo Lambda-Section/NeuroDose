@@ -35,7 +35,7 @@ const compounds = {
     alternatives: ['theobromine', 'yerba-mate'],
     interactionNotes: {
       'l-theanine': 'Synergistic - May reduce jitters',
-      ginseng: 'Use caution - May increase stimulant effects',
+      'ginseng': 'Use caution - May increase stimulant effects',
       'rhodiola': 'Synergistic for focus and energy',
       'cordyceps': 'Complementary for energy and endurance'
     }
@@ -52,8 +52,8 @@ const compounds = {
     categories: ['relaxation', 'cognitive'],
     alternatives: ['glycine', 'taurine'],
     interactionNotes: {
-      caffeine: 'Synergistic - May reduce caffeine jitters',
-      ginseng: 'Generally safe combination',
+      'caffeine': 'Synergistic - May reduce caffeine jitters',
+      'ginseng': 'Generally safe combination',
       'ashwagandha': 'Complementary for stress reduction',
       'magnolia': 'Synergistic for relaxation'
     }
@@ -70,12 +70,29 @@ const compounds = {
     categories: ['adaptogen', 'energy'],
     alternatives: ['eleuthero', 'rhodiola'],
     interactionNotes: {
-      caffeine: 'Use caution - May increase stimulant effects',
+      'caffeine': 'Use caution - May increase stimulant effects',
       'l-theanine': 'Generally safe combination',
       'rhodiola': 'Complementary adaptogenic effects',
       'cordyceps': 'Synergistic for energy'
-    }
-  }
+    },
+  },
+  magnesium: {
+    name: 'Magnesium',
+    halfLife: 12,
+    color: '#8a2be2', // Purple
+    maxDailyDose: 400,
+    absorptionRate: 1.5,
+    bioavailability: 0.3,
+    peakThreshold: 100,
+    minEffectiveConc: 50,
+    categories: ['mineral', 'relaxation'],
+    alternatives: ['magnesium-glycinate', 'magnesium-citrate'],
+    interactionNotes: {
+      'caffeine': 'May reduce caffeine-induced anxiety',
+      'l_theanine': 'Synergistic for relaxation',
+    },
+  },
+
 };
 
 const SupplementTracker = () => {
@@ -216,23 +233,27 @@ const SupplementTracker = () => {
 
   // Notification system
   useEffect(() => {
-    const checkNotifications = setInterval(() => {
-      Object.keys(compounds).forEach(compound => {
-        const currentLevel = doses
-          .filter(d => d.compound === compound)
-          .reduce((sum, d) => sum + calculateConcentration(d, new Date()), 0);
-          
-        if (currentLevel < thresholds[compound]) {
-          setNotifications(prev => [
-            ...prev,
-            `${compounds[compound].name} level below threshold - Consider next dose`
-          ]);
-        }
-      });
-    }, 60000);
-    
-    return () => clearInterval(checkNotifications);
-  }, [doses, thresholds]);
+  const checkNotifications = setInterval(() => {
+    const newNotifications = [];
+    Object.keys(compounds).forEach(compound => {
+      const currentLevel = doses
+        .filter(d => d.compound === compound)
+        .reduce((sum, d) => sum + calculateConcentration(d, new Date()), 0);
+
+      if (currentLevel < thresholds[compound]) {
+        newNotifications.push(`${compounds[compound].name} level below threshold - Consider next dose`);
+      }
+
+      if (currentLevel > compounds[compound].maxDailyDose) {
+        newNotifications.push(`${compounds[compound].name} level exceeds max daily dose - Reduce intake`);
+      }
+    });
+
+    setNotifications(prev => [...prev, ...newNotifications]);
+  }, 60000);
+
+  return () => clearInterval(checkNotifications);
+}, [doses, thresholds]);
 
   return (
     <div className="p-4 max-w-6xl mx-auto">
