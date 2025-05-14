@@ -1,1 +1,0 @@
-- Add visualization as widget to desktop, mac, windows, linux
