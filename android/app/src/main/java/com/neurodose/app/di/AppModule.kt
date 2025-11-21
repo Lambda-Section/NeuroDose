@@ -50,6 +50,7 @@ object AppModule {
             AppDatabase::class.java,
             "neurodose_database"
         )
+            .addCallback(AppDatabase.Callback())
             .fallbackToDestructiveMigration() // For development only
             .build()
     }
